@@ -1,5 +1,5 @@
 from flask_app.config.mysqlconnection import connectToMySQL
-from flask_app.models.pelicula import Pelicula
+from flask_app.models.comentarios import Comentario
 
 class Comentario:
     DB = "esquema_pelicula"
