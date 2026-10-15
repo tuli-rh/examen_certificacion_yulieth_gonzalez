@@ -1,45 +1,29 @@
 from flask import render_template, redirect, request, session, flash
 from flask_app import app
 from flask_app.models.pelicula import Pelicula
-from flask_app.models.comentarios import Comentarios
+from flask_app.models.comentarios import Comentario
 
-@app.route('/peliculas')
-def mis_peliculas():
+@app.route('/cine')
+def dashboard():
     if 'usuario_id' not in session:
         return redirect('/')
-    
-    usuario_id = session['usuario_id']
-    mis_peliculas = Pelicula.get_mis_peliculas(usuario_id)
-    peliculas_comunidad = Pelicula.get_peliculas_comunidad(usuario_id)
-    
-    # Esto te mostrará en la consola si hay libros recuperados de la DB
-    print("MIS PELICULAS OBTENIDOS:", len(mis_peliculas))
-    
-    return render_template('peliculas.html', mis_peliculas=mis_peliculas, peliculas_comunidad=peliculas_comunidad)
+    peliculas = Pelicula.get_all()
+    return render_template('peliculas.html', peliculas=peliculas)
 
-@app.route('/peliculas/nuevo')
+@app.route('/cine/nueva')
 def nueva_pelicula():
     if 'usuario_id' not in session:
         return redirect('/')
     return render_template('nueva_pelicula.html')
 
-@app.route('/peliculas/crear', methods=['POST'])
+@app.route('/cine/crear', methods=['POST'])
 def crear_pelicula():
     if 'usuario_id' not in session:
         return redirect('/')
-
-    # 1. Imprimir los datos que llegan del formulario
-    print("\n--- DATOS RECIBIDOS DEL FORMULARIO ---")
-    print(request.form)
-
-    # 2. Verificar la validación
-    es_valido = Pelicula.validar_Pelicula(request.form)
-    print("¿PASÓ LA VALIDACIÓN?:", es_valido)
-
-    if not es_valido:
-        print("---> Falló la validación, redirigiendo a /peliculas/nuevo\n")
-        return redirect('/peliculas/nuevo')
-
+    if not Pelicula.validar_pelicula(request.form):
+        session['form_data'] = request.form
+        return redirect('/cine/nueva')
+    
     data = {
         'titulo': request.form['titulo'],
         'director': request.form['director'],
@@ -47,86 +31,77 @@ def crear_pelicula():
         'sinopsis': request.form['sinopsis'],
         'usuario_id': session['usuario_id']
     }
-    
-    # 3. Intentar guardar y ver el ID generado
-    nuevo_id = Pelicula.save(data)
-    print("RESULTADO DE LA INSERCIÓN EN MYSQL (ID/Status):", nuevo_id)
-    print("---------------------------------------\n")
+    Pelicula.save(data)
+    session.pop('form_data', None)
+    return redirect('/cine')
 
-    return redirect('/peliculas')
-
-@app.route('/peliculas/<int:id>')
-def mostrar_pelicula(id):
+@app.route('/cine/<int:id>')
+def ver_pelicula(id):
     if 'usuario_id' not in session:
         return redirect('/')
+    pelicula = Pelicula.get_by_id({'id': id})
+    comentarios = Comentario.get_by_pelicula({'pelicula_id': id})
+    return render_template('detalles_pelicula.html', pelicula=pelicula, comentarios=comentarios)
 
-    pelicula = Pelicula.get_by_id(id)
-    if not pelicula:
-        return redirect('/pwliculas')
-
-    es_coment = Comentarios.es_comentario({'usuario_id': session['usuario_id'], 'pelicula_id': id})
-    usuarios_coment = Comentarios.get_usuarios_comentario(id)
-
-    return render_template('detalle_pelicula.html', pelicula=pelicula, es_comentario=es_coment, usuarios_coment=usuarios_coment)
-
-@app.route('/peliculas/editar/<int:id>')
+@app.route('/cine/editar/<int:id>')
 def editar_pelicula(id):
     if 'usuario_id' not in session:
         return redirect('/')
-
-    pelicula = Pelicula.get_by_id(id)
-    if not pelicula or pelicula.usuario_id != session['usuario_id']:
-        return redirect('/peliculas')
-
+    pelicula = Pelicula.get_by_id({'id': id})
+    if pelicula.usuario_id != session['usuario_id']:
+        return redirect('/cine')
     return render_template('editar_peli.html', pelicula=pelicula)
 
-@app.route('/peliculas/actualizar/<int:id>', methods=['POST'])
+@app.route('/cine/actualizar/<int:id>', methods=['POST'])
 def actualizar_pelicula(id):
     if 'usuario_id' not in session:
         return redirect('/')
-
-    pelicula = Pelicula.get_by_id(id)
-    if not pelicula or pelicula.usuario_id != session['usuario_id']:
-        return redirect('/peliculas')
-
-    if not Pelicula.validar_pelicula(request.form):
-        return redirect(f'/peliculas/editar/{id}')
-
+    pelicula = Pelicula.get_by_id({'id': id})
+    if pelicula.usuario_id != session['usuario_id']:
+        return redirect('/cine')
+    
+    if not Pelicula.validar_pelicula(request.form, pelicula_id=id):
+        session['form_data'] = request.form
+        return redirect(f'/cine/editar/{id}')
+    
     data = {
         'id': id,
         'titulo': request.form['titulo'],
         'director': request.form['director'],
         'fecha_estreno': request.form['fecha_estreno'],
-        'sinopsis': request.form['sinopsis'],
-        'usuario_id': session['usuario_id']
+        'sinopsis': request.form['sinopsis']
     }
     Pelicula.update(data)
-    return redirect('/peliculas')
+    session.pop('form_data', None)
+    return redirect('/cine')
 
-@app.route('/peliculas/borrar/<int:id>')
-def borrar_libro(id):
+@app.route('/cine/borrar/<int:id>')
+def borrar_pelicula(id):
     if 'usuario_id' not in session:
         return redirect('/')
+    pelicula = Pelicula.get_by_id({'id': id})
+    if pelicula and pelicula.usuario_id == session['usuario_id']:
+        Pelicula.delete({'id': id})
+    return redirect('/cine')
 
-    data = {
-        'id': id,
-        'usuario_id': session['usuario_id']
-    }
-    Pelicula.delete(data)
-    return redirect('/peliculas')
-
-@app.route('/comentarios/agregar/<int:pelicula_id>')
-def agregar_comentario(pelicula_id):
+@app.route('/comentario/crear', methods=['POST'])
+def crear_comentario():
     if 'usuario_id' not in session:
         return redirect('/')
+    pelicula_id = request.form['pelicula_id']
+    pelicula = Pelicula.get_by_id({'id': pelicula_id})
+    
+    if pelicula.usuario_id != session['usuario_id'] and len(request.form['comentario'].strip()) > 0:
+        Comentario.save({
+            'comentario': request.form['comentario'],
+            'usuario_id': session['usuario_id'],
+            'pelicula_id': pelicula_id
+        })
+    return redirect(f'/cine/{pelicula_id}')
 
-    Comentarios.add_comentario({'usuario_id': session['usuario_id'], 'pelicula_id': pelicula_id})
-    return redirect(f'/peliculas/{pelicula_id}')
-
-@app.route('/comentarios')
-def mis_comentarios():
+@app.route('/comentario/borrar/<int:id>/<int:pelicula_id>')
+def borrar_comentario(id, pelicula_id):
     if 'usuario_id' not in session:
         return redirect('/')
-
-    comentarios = Comentarios.get_comentarios_por_usuario(session['usuario_id'])
-    return render_template('mis_comentarios.html', comentarios=comentarios)
+    Comentario.delete({'id': id, 'usuario_id': session['usuario_id']})
+    return redirect(f'/cine/{pelicula_id}')

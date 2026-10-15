@@ -5,7 +5,7 @@ import re
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+$')
 
 class Usuario:
-    DB = "esquema_peliculas"
+    db = 'esquema_peliculas'
 
     def __init__(self, data):
         self.id = data['id']
@@ -19,53 +19,47 @@ class Usuario:
     @classmethod
     def save(cls, data):
         query = """
-            INSERT INTO usuarios (nombre, apellido, email, password)
-            VALUES (%(nombre)s, %(apellido)s, %(email)s, %(password)s);
+        INSERT INTO usuarios (nombre, apellido, email, password)
+        VALUES (%(nombre)s, %(apellido)s, %(email)s, %(password)s);
         """
-        return connectToMySQL(cls.DB).query_db(query, data)
+        return connectToMySQL(cls.db).query_db(query, data)
 
     @classmethod
-    def get_by_email(cls, email):
+    def get_by_email(cls, data):
         query = "SELECT * FROM usuarios WHERE email = %(email)s;"
-        results = connectToMySQL(cls.DB).query_db(query, {'email': email})
+        results = connectToMySQL(cls.db).query_db(query, data)
         if len(results) < 1:
             return False
         return cls(results[0])
 
     @classmethod
-    def get_by_id(cls, user_id):
+    def get_by_id(cls, data):
         query = "SELECT * FROM usuarios WHERE id = %(id)s;"
-        results = connectToMySQL(cls.DB).query_db(query, {'id': user_id})
-        if not results:
-            return None
+        results = connectToMySQL(cls.db).query_db(query, data)
+        if len(results) < 1:
+            return False
         return cls(results[0])
 
     @staticmethod
-    def validar_registro(usuario):
+    def validar_registro(data):
         is_valid = True
-
-        if len(usuario['nombre'].strip()) < 2:
+        if len(data['nombre']) < 2:
             flash("El nombre debe tener al menos 2 caracteres.", "registro")
             is_valid = False
-
-        if len(usuario['apellido'].strip()) < 2:
+        if len(data['apellido']) < 2:
             flash("El apellido debe tener al menos 2 caracteres.", "registro")
             is_valid = False
-
-        if not EMAIL_REGEX.match(usuario['email']):
-            flash("El correo electrónico no es válido.", "registro")
+        if not EMAIL_REGEX.match(data['email']):
+            flash("Formato de email inválido.", "registro")
             is_valid = False
         else:
-            if Usuario.get_by_email(usuario['email']):
-                flash("El correo electrónico ya está registrado.", "registro")
+            if Usuario.get_by_email({'email': data['email']}):
+                flash("El email ya está registrado.", "registro")
                 is_valid = False
-
-        if len(usuario['password']) < 8:
+        if len(data['password']) < 8:
             flash("La contraseña debe tener al menos 8 caracteres.", "registro")
             is_valid = False
-
-        if usuario['password'] != usuario['confirm_password']:
+        if data['password'] != data['confirm_password']:
             flash("Las contraseñas no coinciden.", "registro")
             is_valid = False
-
         return is_valid

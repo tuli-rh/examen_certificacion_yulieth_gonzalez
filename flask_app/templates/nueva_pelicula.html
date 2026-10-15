@@ -1,67 +1,44 @@
 <!DOCTYPE html>
 <html lang="es">
-
 <head>
     <meta charset="UTF-8">
-    <title>BookHub - Nuevo Libro</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>Nueva Película</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 </head>
-
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="/peliculas">CinePedia</a>
-            <div class="navbar-nav me-auto">
-                <a class="nav-link" href="/paliculas">Mis Peliculas</a>
-                <a class="nav-link" href="/favoritos">Mis Favoritos</a>
-            </div>
-            <span class="navbar-text">Bienvenido, {{ session['usuario_nombre'] }}</span>
+<body class="bg-light">
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Nueva Película</h2>
+        <div>
+            <a href="/cine">Inicio</a> | <a href="/logout">Cerrar Sesión</a>
         </div>
-    </nav>
-
-    <div class="container" style="max-width: 600px;">
-        <h2>Agregar Nuevo Libro</h2>
-
-        {% with messages = get_flashed_messages(category_filter=["libro"]) %}
-        {% if messages %}
-        <div class="alert alert-danger">
-            {% for msg in messages %}<p class="mb-0">{{ msg }}</p>{% endfor %}
-        </div>
-        {% endif %}
-        {% endwith %}
-
-        <form action="/libros/crear" method="POST">
-            <div class="mb-3">
-                <label class="form-label">Título:</label>
-                <input type="text" name="titulo" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Autor:</label>
-                <input type="text" name="autor" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Género:</label>
-                <select name="genero" class="form-select" required>
-                    <option value="">Selecciona un género</option>
-                    <option value="Novela">Novela</option>
-                    <option value="Fábula">Fábula</option>
-                    <option value="Ciencia Ficción">Ciencia Ficción</option>
-                    <option value="Romance">Romance</option>
-                    <option value="Desarrollo Personal">Desarrollo Personal</option>
-                </select>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Fecha de publicación:</label>
-                <input type="date" name="fecha_publicacion" class="form-control" required>
-            </div>
-            <div class="mb-3">
-                <label class="form-label">Descripción:</label>
-                <textarea name="descripcion" class="form-control" rows="4" required></textarea>
-            </div>
-            <button type="submit" class="btn btn-dark">Guardar</button>
-            <a href="/libros" class="btn btn-link">Cancelar</a>
-        </form>
     </div>
+    {% with messages = get_flashed_messages(category_filter=["pelicula"]) %}
+        {% if messages %}
+            {% for msg in messages %}
+                <div class="alert alert-danger py-1">{{ msg }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+    <form action="/cine/crear" method="POST" class="col-md-6">
+        <div class="mb-3">
+            <label>Nombre de Peli:</label>
+            <input type="text" name="titulo" class="form-control" value="{{ session.get('form_data', {}).get('titulo', '') }}">
+        </div>
+        <div class="mb-3">
+            <label>Director:</label>
+            <input type="text" name="director" class="form-control" value="{{ session.get('form_data', {}).get('director', '') }}">
+        </div>
+        <div class="mb-3">
+            <label>Fecha Estreno:</label>
+            <input type="date" name="fecha_estreno" class="form-control" value="{{ session.get('form_data', {}).get('fecha_estreno', '') }}">
+        </div>
+        <div class="mb-3">
+            <label>Sinopsis:</label>
+            <textarea name="sinopsis" class="form-control" rows="4">{{ session.get('form_data', {}).get('sinopsis', '') }}</textarea>
+        </div>
+        <button type="submit" class="btn btn-primary">Guardar Película</button>
+    </form>
+</div>
 </body>
-
 </html>

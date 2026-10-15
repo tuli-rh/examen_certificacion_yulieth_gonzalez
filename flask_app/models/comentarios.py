@@ -1,45 +1,40 @@
 from flask_app.config.mysqlconnection import connectToMySQL
-from flask_app.models.comentarios import Comentario
 
 class Comentario:
-    DB = "esquema_pelicula"
+    db = 'esquema_peliculas'
+
+    def __init__(self, data):
+        self.id = data['id']
+        self.comentario = data['comentario']
+        self.usuario_id = data['usuario_id']
+        self.pelicula_id = data['pelicula_id']
+        self.created_at = data['created_at']
+        self.autor = data.get('autor', '')
 
     @classmethod
-    def add_favorito(cls, data):
-        query = "INSERT IGNORE INTO favoritos (usuario_id, libro_id) VALUES (%(usuario_id)s, %(libro_id)s);"
-        return connectToMySQL(cls.DB).query_db(query, data)
-
-    @classmethod
-    def es_favorito(cls, data):
-        query = "SELECT * FROM favoritos WHERE usuario_id = %(usuario_id)s AND libro_id = %(libro_id)s;"
-        results = connectToMySQL(cls.DB).query_db(query, data)
-        return len(results) > 0
-
-    @classmethod
-    def get_usuarios_favorito(cls, libro_id):
+    def save(cls, data):
         query = """
-            SELECT u.nombre
-            FROM favoritos f
-            JOIN usuarios u ON f.usuario_id = u.id
-            WHERE f.libro_id = %(libro_id)s;
+        INSERT INTO comentarios (comentario, usuario_id, pelicula_id)
+        VALUES (%(comentario)s, %(usuario_id)s, %(pelicula_id)s);
         """
-        results = connectToMySQL(cls.DB).query_db(query, {'libro_id': libro_id})
-        return [row['nombre'] for row in results] if results else []
+        return connectToMySQL(cls.db).query_db(query, data)
 
     @classmethod
-    def get_favoritos_por_usuario(cls, usuario_id):
+    def get_by_pelicula(cls, data):
         query = """
-            SELECT l.*, f.created_at AS fecha_agregado
-            FROM favoritos f
-            JOIN libros l ON f.libro_id = l.id
-            WHERE f.usuario_id = %(usuario_id)s
-            ORDER BY f.created_at DESC;
+        SELECT comentarios.*, usuarios.nombre AS autor 
+        FROM comentarios 
+        JOIN usuarios ON comentarios.usuario_id = usuarios.id 
+        WHERE pelicula_id = %(pelicula_id)s 
+        ORDER BY comentarios.created_at DESC;
         """
-        results = connectToMySQL(cls.DB).query_db(query, {'usuario_id': usuario_id})
-        favoritos = []
-        if results:
-            for row in results:
-                libro = Comentario(row)
-                libro.fecha_favorito = row['fecha_agregado']
-                favoritos.append(libro)
-        return favoritos
+        results = connectToMySQL(cls.db).query_db(query, data)
+        comentarios = []
+        for row in results:
+            comentarios.append(cls(row))
+        return comentarios
+
+    @classmethod
+    def delete(cls, data):
+        query = "DELETE FROM comentarios WHERE id = %(id)s AND usuario_id = %(usuario_id)s;"
+        return connectToMySQL(cls.db).query_db(query, data)
