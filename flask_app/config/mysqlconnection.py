@@ -11,7 +11,7 @@ class MySQLConnection:
             user=os.getenv("MYSQL_USER", "root"),
             password=os.getenv("MYSQL_PASSWORD", "root"),
             db=db,
-            charset='utf8mb4',
+            charset='utf8',
             cursorclass=pymysql.cursors.DictCursor,
             autocommit=True
         )
